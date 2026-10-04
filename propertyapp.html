@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Property Connect - Interest-Based Audio Alert Edition</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --secondary: #059669;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
+    header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+    .btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; text-decoration: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--secondary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-outline { background: transparent; border: 1px solid currentColor; }
+    .nav-tabs { display: flex; background: white; border-bottom: 2px solid var(--border); position: sticky; top: 50px; z-index: 40; }
+    .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; }
+    .nav-tab.active { border-bottom-color: var(--primary); color: var(--primary); background: #eff6ff; }
+    .filter-panel { background: white; padding: 12px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .filter-panel select, .filter-panel input { padding: 7px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%; }
+    .interest-strip { background: #e0f2fe; padding: 8px 12px; border-bottom: 1px solid #bae6fd; font-size: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .interest-strip select { padding: 4px 8px; border-radius: 4px; border: 1px solid #7dd3fc; font-weight: 600; font-size: 12px; }
+    .container { padding: 12px; max-width: 600px; margin: auto; }
+    .card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); content-visibility: auto; }
+    .card-gallery { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; height: 180px; background: #e2e8f0; }
+    .card-gallery img { min-width: 100%; height: 100%; object-fit: cover; scroll-snap-align: start; }
+    .card-body { padding: 12px; }
+    .badge-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .badge-verified { background: #dcfce7; color: #15803d; }
+    .badge-fast { background: #fef08a; color: #854d0e; }
+    .badge-sold { background: #fee2e2; color: #991b1b; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+    .alert-box { background: #fffbeb; border: 1px solid #fef3c7; color: #92400e; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; line-height: 1.4; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+    .modal-content { background: white; border-radius: 8px; padding: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+    .section-title { font-size: 14px; font-weight: bold; color: var(--primary); margin: 16px 0 8px 0; padding-bottom: 4px; border-bottom: 2px solid var(--border); }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px; z-index: 40; }
+    .load-more-wrap { text-align: center; margin: 16px 0; }
+    .payout-box { background: #f0fdf4; border: 1px dashed #16a34a; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h3 id="app-title">🏠 Property Connect Rajasthan</h3>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button class="btn btn-outline" style="color:white; border-color:white;" onclick="toggleLang()" id="lang-btn">English</button>
+    <button class="btn btn-outline" style="color:white; border-color:white;" onclick="openAdminModal()">⚙ Admin</button>
+  </div>
+</header>
+
+<!-- Customer Interest Selection Strip -->
+<div class="interest-strip">
+  <span>🎯 <b>मेरी पसंद (Customer Interest):</b></span>
+  <select id="user-interest" onchange="saveCustomerInterest()">
+    <option value="Plot">प्लॉट / खुली ज़मीन (Plot)</option>
+    <option value="Makan">मकान / स्वतंत्र घर (House)</option>
+    <option value="Shop">दुकान / कमर्शियल (Shop)</option>
+    <option value="Building">बिल्डिंग / कॉम्प्लेक्स</option>
+    <option value="Rent">किराया प्रॉपर्टी (Rent)</option>
+  </select>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" id="tab-sale" onclick="switchMainTab('Sale')">🏷️ बिकाऊ (Sale)</div>
+  <div class="nav-tab" id="tab-rent" onclick="switchMainTab('Rent')">🔑 किराया (Rent)</div>
+</div>
+
+<div class="filter-panel">
+  <select id="filter-state" onchange="loadFilterDistricts()">
+    <option value="">राज्य चुनें</option>
+  </select>
+  <select id="filter-district">
+    <option value="">ज़िला चुनें (District)</option>
+  </select>
+  <select id="filter-type">
+    <option value="">सभी प्रकार (All Types)</option>
+    <option value="Plot">प्लॉट / खुली ज़मीन</option>
+    <option value="Makan">मकान (House)</option>
+    <option value="Shop">दुकान (Shop)</option>
+    <option value="Building">बिल्डिंग (Building)</option>
+  </select>
+  <button class="btn btn-primary" onclick="resetAndRenderFeed()">खोजें (Search)</button>
+</div>
+
+<div class="container">
+  <div id="feed-container"></div>
+  <div class="load-more-wrap" id="load-more-wrap" style="display:none;">
+    <button class="btn btn-primary" onclick="loadMoreCards()">और प्रॉपर्टी लोड करें (+10)</button>
+  </div>
+</div>
+
+<!-- Interest-Based Smart Proximity Audio & Visual Banner -->
+<div id="proximity-alert" style="display:none; position:fixed; top:75px; left:12px; right:12px; background:#fffbeb; border:2px solid #f59e0b; border-radius:10px; padding:14px; z-index:90; box-shadow:0 10px 15px -3px rgba(0,0,0,0.15);">
+  <div style="font-weight:bold; color:#b45309; font-size:14px;" id="prox-text">
+    🔔 आपकी रुचि के अनुसार प्रॉपर्टी अलर्ट!
+  </div>
+  <div style="font-size:13px; color:#1e293b; margin:6px 0;" id="prox-speech-display">
+    "आपकी इस लोकेशन से 1 किमी की दूरी पर एक प्लॉट उपलब्ध है।"
+  </div>
+  <div style="font-size:12px; color:#64748b; margin-bottom:8px;" id="prox-balance">
+    मुफ़्त विज़िट शेष: <b id="visit-count">3</b>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button class="btn btn-success btn-sm" onclick="handleProximityUnlock()">विवरण अनलॉक करें</button>
+    <button class="btn btn-warning btn-sm" onclick="replayAudioAlert()">🔊 दोबारा सुनें</button>
+    <button class="btn btn-danger btn-sm" onclick="document.getElementById('proximity-alert').style.display='none'">बंद करें</button>
+  </div>
+</div>
+
+<!-- Modal: Post Property Form -->
+<div class="modal" id="post-modal">
+  <div class="modal-content">
+    <h3 style="margin-bottom:8px;">➕ नयी प्रॉपर्टी दर्ज करें</h3>
+    <div class="alert-box">
+      ⚠️ <b>महत्वपूर्ण:</b> केवल उसी संपत्ति की लाइव फोटो डालें जिसे बेचना है या किराए पर देना हो।
+    </div>
+    <form id="post-form" onsubmit="saveProperty(event)">
+      <div class="form-group">
+        <label>प्रकार (Listing Type)</label>
+        <select id="post-type" required>
+          <option value="Sale">बिकाऊ (Sale)</option>
+          <option value="Rent">किराया (Rent)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>श्रेणी (Category)</label>
+        <select id="post-cat" required>
+          <option value="Plot">प्लॉट / खुली ज़मीन (Open Land)</option>
+          <option value="Makan">मकान / स्वतंत्र घर</option>
+          <option value="Shop">दुकान / शोरूम</option>
+          <option value="Building">बिल्डिंग / कॉम्प्लेक्स</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>शीर्षक (Title)</label>
+        <input type="text" id="post-title" placeholder="उदा. 200 वर्ग गज आवासीय प्लॉट" required>
+      </div>
+      <div class="form-group">
+        <label>क़ीमत / किराया (₹)</label>
+        <input type="number" id="post-price" placeholder="उदा. 2500000" required>
+      </div>
+
+      <div class="form-group">
+        <label>ओनर का मोबाइल नंबर (डायरेक्ट कॉलिंग हेतु)</label>
+        <input type="tel" id="post-phone" placeholder="उदा. 98290XXXXX" pattern="[0-9]{10}" required>
+      </div>
+
+      <div class="form-group">
+        <label>1. राज्य चुनें (State)</label>
+        <select id="post-state" onchange="onStateChange()" required>
+          <option value="">-- राज्य चुनें --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>2. ज़िला चुनें (District)</label>
+        <select id="post-district" onchange="onDistrictChange()" required>
+          <option value="">-- पहले राज्य चुनें --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>3. गाँव / कस्बा / तहसील (Village/Town)</label>
+        <select id="post-village" onchange="onVillageChange()" required>
+          <option value="">-- पहले ज़िला चुनें --</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="manual-village-group" style="display:none;">
+        <label>गाँव का नाम यहाँ लिखें (Custom Village Name)</label>
+        <input type="text" id="post-village-custom" placeholder="अपने गाँव का नाम दर्ज करें">
+      </div>
+
+      <div class="form-group">
+        <label>क्षेत्र प्रकार (Area Type)</label>
+        <select id="post-area-type">
+          <option value="Rural">ग्रामीण (Rural)</option>
+          <option value="Urban">शहरी (Urban)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>वार्ड नं. / गली / लैंडमार्क</label>
+        <input type="text" id="post-ward" placeholder="उदा. वार्ड 05, बस स्टैंड के पीछे" required>
+      </div>
+
+      <div class="form-group">
+        <label>फ़ोटो 1 (अनिवार्य - लाइव बैक कैमरा) [Auto Compress]</label>
+        <input type="file" accept="image/*" capture="environment" id="post-p1" required>
+      </div>
+      <div class="form-group">
+        <label>फ़ोटो 2, 3, 4 (ग्राहक संतुष्टि हेतु - ऐच्छिक)</label>
+        <input type="file" accept="image/*" id="post-p2" style="margin-bottom:4px;">
+        <input type="file" accept="image/*" id="post-p3" style="margin-bottom:4px;">
+        <input type="file" accept="image/*" id="post-p4">
+      </div>
+      <div class="form-group" id="doc-field">
+        <label>दस्तावेज़ (रजिस्ट्री/पट्टा) - एडमिन सत्यापन हेतु</label>
+        <input type="file" id="post-doc">
+      </div>
+      <button type="submit" class="btn btn-success" style="width:100%; padding:10px;">सुरक्षित पोस्ट करें (Publish)</button>
+      <button type="button" class="btn" style="width:100%; margin-top:8px;" onclick="closeModal('post-modal')">रद्द करें</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Admin Dashboard -->
+<div class="modal" id="admin-modal">
+  <div class="modal-content">
+    <h3>👑 एडमिन मास्टर डैशबोर्ड</h3>
+    
+    <div id="admin-login-sec">
+      <div class="form-group" style="margin-top:12px;">
+        <label>एडमिन पिन दर्ज करें (Default: 1234)</label>
+        <input type="password" id="admin-pin-input" placeholder="पिन डालें">
+      </div>
+      <button class="btn btn-primary" onclick="verifyAdminPin()" style="width:100%;">डैशबोर्ड खोलें</button>
+    </div>
+
+    <div id="admin-controls-sec" style="display:none;">
+      <div style="font-size:12px; margin-bottom:12px; color:#64748b;">
+        ग्लोबल मास्टर सेटिंग्स (सभी रजिस्टर्ड डिवाइस पर तुरंत लागू)
+      </div>
+      
+      <div class="switch-row">
+        <span>डील्स पर ब्रोकरेज सिस्टम:</span>
+        <button class="btn btn-sm btn-success" id="sw-brokerage" onclick="toggleSwitch('brokerage')">ON</button>
+      </div>
+      <div class="switch-row">
+        <span>डॉक्यूमेंट सत्यापन अनिवार्य:</span>
+        <button class="btn btn-sm btn-success" id="sw-doc" onclick="toggleSwitch('doc')">ON</button>
+      </div>
+      <div class="switch-row">
+        <span>1-डिवाइस 1-नंबर लॉक:</span>
+        <button class="btn btn-sm btn-success" id="sw-devlock" onclick="toggleSwitch('devlock')">ON</button>
+      </div>
+      <div class="switch-row">
+        <span>कस्टमर रुचि अनुसार बोलकर बताने वाला साउंड अलर्ट:</span>
+        <button class="btn btn-sm btn-success" id="sw-audio" onclick="toggleSwitch('audio')">ON</button>
+      </div>
+      <div class="switch-row">
+        <span>3 विज़िट के बाद ओपन लैंड चार्ज:</span>
+        <button class="btn btn-sm btn-success" id="sw-visitfee" onclick="toggleSwitch('visitfee')">ON</button>
+      </div>
+      
+      <div class="form-group" style="margin-top:12px;">
+        <label>विज़िट अनलॉक चार्ज (₹):</label>
+        <input type="number" id="cfg-fee" value="99" onchange="saveAdminConfig()">
+      </div>
+
+      <div class="section-title">📞 एडमिन सहायता संपर्क विवरण</div>
+      <div class="form-group">
+        <label>कस्टमर केयर नंबर:</label>
+        <input type="text" id="cfg-phone" value="9829000000" onchange="saveAdminConfig()">
+      </div>
+      <div class="form-group">
+        <label>सपोर्ट ईमेल आईडी:</label>
+        <input type="text" id="cfg-email" value="support@propertyconnect.com" onchange="saveAdminConfig()">
+      </div>
+
+      <div class="section-title">💳 एडमिन UPI एवं बैंक खाता विवरण</div>
+      <div class="form-group">
+        <label>एडमिन UPI ID:</label>
+        <input type="text" id="cfg-upi" placeholder="उदा. admin@upi" onchange="saveAdminConfig()">
+      </div>
+      <div class="form-group">
+        <label>बैंक का नाम (Bank Name):</label>
+        <input type="text" id="cfg-bankname" placeholder="उदा. State Bank of India" onchange="saveAdminConfig()">
+      </div>
+      <div class="form-group">
+        <label>खाताधारक का नाम (A/C Holder Name):</label>
+        <input type="text" id="cfg-acholder" placeholder="उदा. Vinod Kumar Sharma" onchange="saveAdminConfig()">
+      </div>
+      <div class="form-group">
+        <label>खाता संख्या (Account Number):</label>
+        <input type="text" id="cfg-accno" placeholder="उदा. 3089456XXXX" onchange="saveAdminConfig()">
+      </div>
+      <div class="form-group">
+        <label>IFSC कोड (IFSC Code):</label>
+        <input type="text" id="cfg-ifsc" placeholder="उदा. SBIN000XXXX" onchange="saveAdminConfig()">
+      </div>
+
+      <button class="btn btn-success btn-sm" style="width:100%; margin-top:8px;" onclick="saveAdminConfig(true)">💾 सुरक्षित करें</button>
+      <button class="btn btn-danger btn-sm" style="width:100%; margin-top:10px;" onclick="closeModal('admin-modal')">डैशबोर्ड से बाहर निकलें</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Payment Details for Customers -->
+<div class="modal" id="payment-modal">
+  <div class="modal-content">
+    <h3>💳 भुगतान विवरण</h3>
+    <div class="alert-box">
+      3 मुफ़्त विज़िट समाप्त हो चुके हैं। विवरण अनलॉक करने हेतु निर्धारित शुल्क का भुगतान करें।
+    </div>
+    <div class="payout-box" id="payout-details-display"></div>
+    <button class="btn btn-success" style="width:100%; padding:10px; margin-top:8px;" onclick="confirmCustomerPayment()">✅ भुगतान कर दिया है (अनुरोध भेजें)</button>
+    <button class="btn btn-danger" style="width:100%; margin-top:8px;" onclick="closeModal('payment-modal')">रद्द करें</button>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="btn btn-primary" onclick="openModal('post-modal')">➕ पोस्ट प्रॉपर्टी</button>
+  <button class="btn" style="background:#e2e8f0;" onclick="testNearbyProximity()">📍 टेस्ट साउंड पॉप-अप</button>
+</div>
+
+<script>
+  let currentLang = 'hi';
+  let currentMainTab = 'Sale';
+  let userFreeVisitsRemaining = 3;
+  let visibleLimit = 10;
+  let activeFilteredList = [];
+  let lastSpokenText = "";
+
+  const indiaLocationHierarchy = {
+    "Rajasthan": {
+      "Didwana-Kuchaman": ["Didwana", "Kuchaman City", "Makrana", "Ladnun", "Nawa", "Parbatsar", "Choti Khatu", "Molasar", "Mithri", "Maroth", "Koliya", "Guda Salt", "Lalas", "Singrawat", "अन्य / Other"],
+      "Nagaur": ["Nagaur", "Merta City", "Degana", "Jayal", "Khinvsar", "Riyan Badi", "Mundwa", "Gachhipura", "Bhadwasi", "Basni", "Padu Kalan", "अन्य / Other"],
+      "Jaipur": ["Jaipur Urban", "Chomu", "Amer", "Sanganer", "Bassi", "Kotputli", "Shahpura", "Chaksu", "Jamwa Ramgarh", "Jober", "अन्य / Other"],
+      "Jaipur Gramin": ["Bassi", "Chaksu", "Chomu", "Amer Gramin", "Jamwa Ramgarh", "Kotputli Gramin", "Paota", "Shahpura Gramin", "अन्य / Other"],
+      "Jodhpur": ["Jodhpur City", "Luni", "Mandore", "Kuri Bhagtasani", "अन्य / Other"],
+      "Jodhpur Gramin": ["Bilara", "Bhopalgarh", "Osian", "Balesar", "Baori", "Luni Gramin", "Tiwri", "Piparcity", "Shergarh", "अन्य / Other"],
+      "Sikar": ["Sikar City", "Fatehpur", "Laxmangarh", "Danta Ramgarh", "Khandela", "Reengus", "Dhod", "Patan", "Nechwa", "अन्य / Other"],
+      "Neem Ka Thana": ["Neem Ka Thana City", "Khetri", "Udaipurwati", "Patan", "Shri Madhopur", "Ajeetgarh", "अन्य / Other"],
+      "Ajmer": ["Ajmer City", "Kishangarh", "Nasirabad", "Pushkar", "Pisangan", "Gagwana", " अन्य / Other"],
+      "Beawar": ["Beawar City", "Masuda", "Jaitaran", "Raipur", "Badnor", "Sheoganj", "अन्य / Other"],
+      "Kekri": ["Kekri", "Sarwar", "Bhinai", "Todaraisingh", "Sawar", "अन्य / Other"],
+      "Alwar": ["Alwar City", "Ramgarh", "Rajgarh", "Laxmangarh", "Thanagazi", "Malakhera", "अन्य / Other"],
+      "Khairthal-Tijara": ["Tijara", "Khairthal", "Kishangarh Bas", "Kotkasim", "Mundawar", "Bhiwadi", "अन्य / Other"],
+      "Kotputli-Behror": ["Kotputli", "Behror", "Neemrana", "Bansur", "Mandhan", "Paota", "अन्य / Other"],
+      "Anupgarh": ["Anupgarh", "Suratgarh", "Raoatsar", "Gharsana", "Rawla", "Ramsinghpur", "Vijaynagar", "अन्य / Other"],
+      "Balotra": ["Balotra", "Siwana", "Samdari", "Baytu", "Pachpadra", "Gida", "Sindhari", "अन्य / Other"],
+      "Barmer": ["Barmer City", "Sheo", "Chohtan", "Dhorimanna", "Gudamalani", "Sedwa", "Ramsar", "अन्य / Other"],
+      "Banswara": ["Banswara City", "Garhi", "Ghatol", "Kushalgarh", "Bagidora", "Chhoti Sarwan", "अन्य / Other"],
+      "Baran": ["Baran City", "Antah", "Atru", "Chhabra", "Kishanganj", "Mangrol", "Shahbad", "अन्य / Other"],
+      "Bharatpur": ["Bharatpur City", "Bayana", "Kaman", "Nagar", "Nadbai", "Weir", "Roopwas", "अन्य / Other"],
+      "Deeg": ["Deeg", "Kaman", "Nagar", "Kumher", "Pahadi", "Jurhara", "अन्य / Other"],
+      "Bhilwara": ["Bhilwara City", "Mandal", "Mandalgarh", "Sahada", "Asind", "Kotri", "Raipur", "अन्य / Other"],
+      "Shahpura (Bhilwara)": ["Shahpura", "Jhajpur", "Kotri", "Banera", "Phulia Kalan", "अन्य / Other"],
+      "Bikaner": ["Bikaner City", "Nokha", "Lunkaransar", "Kolayat", "Khajuwala", "Dungargarh", " अन्य / Other"],
+      "Bundi": ["Bundi City", "Keshoraipatan", "Hindoli", "Nainwa", "Indragarh", "Talera", "अन्य / Other"],
+      "Chittorgarh": ["Chittorgarh City", "Nimbahera", "Bari Sadri", "Begun", "Kapasan", "Rawatbhata", "अन्य / Other"],
+      "Churu": ["Churu City", "Ratangarh", "Sujangarh", "Sardarshahar", "Rajgarh (Sadulpur)", "Taranagar", "Bidasar", "अन्य / Other"],
+      "Dausa": ["Dausa City", "Bandikui", "Lalsot", "Mahwa", "Sikrai", "Rahuwas", "अन्य / Other"],
+      "Dholpur": ["Dholpur City", "Bari", "Baseri", "Rajakhera", "Saipau", "Sarmathura", "अन्य / Other"],
+      "Dungarpur": ["Dungarpur City", "Sagwara", "Aspur", "Simalwara", "Bichhiwara", "Dovda", "अन्य / Other"],
+      "Ganganagar": ["Sri Ganganagar", "Karanpur", "Sadulshahar", "Padampur", "Gajsinghpur", "अन्य / Other"],
+      "Gangapur City": ["Gangapur City", "Wazirpur", "Bamanwas", "Todabhim", "Nadoti", "अन्य / Other"],
+      "Hanumangarh": ["Hanumangarh Town", "Nohar", "Bhadra", "Pilibanga", "Sangaria", "Rawatsar", "अन्य / Other"],
+      "Jaisalmer": ["Jaisalmer City", "Pokaran", "Fatehgarh", "Bhaniyana", "Mohangarh", "अन्य / Other"],
+      "Jalore": ["Jalore City", "Bhinmal", "Ahore", "Sayla", "Bhadrajun", "Bagra", "अन्य / Other"],
+      "Sanchore": ["Sanchore City", "Bagoda", "Chitalwana", "Raniwara", "अन्य / Other"],
+      "Jhalawar": ["Jhalawar", "Jhalrapatan", "Aklera", "Bhawani Mandi", "Pirawa", "Khanpur", "Manohar Thana", "अन्य / Other"],
+      "Jhunjhunu": ["Jhunjhunu City", "Nawalgarh", "Chirawa", "Buhana", "Surajgarh", "Malsisar", "Mandawa", "अन्य / Other"],
+      "Karauli": ["Karauli City", "Hindaun City", "Mandrail", "Sapotra", "Masilpur", "अन्य / Other"],
+      "Kota": ["Kota City", "Ladpura", "Sangod", "Ramganj Mandi", "Digod", "Kanwas", "अन्य / Other"],
+      "Pali": ["Pali City", "Sumerpur", "Sojat", "Bali", "Rani", "Rohat", "Marwar Junction", "अन्य / Other"],
+      "Phalodi": ["Phalodi City", "Lohawat", "Bap", "Aau", "Dechu", "Bapini", "अन्य / Other"],
+      "Pratapgarh": ["Pratapgarh City", "Dhariawad", "Arnod", "Chhoti Sadri", "Peepalkhoont", "अन्य / Other"],
+      "Rajsamand": ["Rajsamand (Kankroli)", "Nathdwara", "Amet", "Kumbhalgarh", "Bhim", "Railmagra", "Deogarh", "अन्य / Other"],
+      "Salumbar": ["Salumbar City", "Sarada", "Semari", "Lasadiya", "Jhallara", "अन्य / Other"],
+      "Sawai Madhopur": ["Sawai Madhopur", "Chauth Ka Barwara", "Khandar", "Bonli", "Malarna Doongar", "अन्य / Other"],
+      "Sirohi": ["Sirohi City", "Mount Abu", "Abu Road", "Pindwara", "Sheoganj", "Reodar", "अन्य / Other"],
+      "Tonk": ["Tonk City", "Niwai", "Malpura", "Deoli", "Uniara", "Peeplu", "अन्य / Other"],
+      "Udaipur": ["Udaipur City", "Mavli", "Vallabhnagar", "Girwa", "Gogunda", "Kotra", "Kherwara", "Badgaon", "अन्य / Other"]
+    }
+  };
+
+  let adminSettings = JSON.parse(localStorage.getItem('adminSettings')) || {
+    brokerage: true,
+    doc: true,
+    devlock: true,
+    audio: true,
+    visitfee: true,
+    visitAmount: 99,
+    phone: "9829000000",
+    email: "support@propertyconnect.com",
+    upiId: "propertyadmin@upi",
+    bankName: "State Bank of India",
+    acHolder: "Admin Property Connect",
+    accNo: "30894567890",
+    ifsc: "SBIN0001234"
+  };
+
+  let customerInterest = localStorage.getItem('customerInterest') || 'Plot';
+
+  let properties = JSON.parse(localStorage.getItem('cachedProperties')) || [
+    {
+      id: 1,
+      type: "Sale",
+      category: "Plot",
+      title: "कमर्शियल प्लॉट, स्टेशन रोड",
+      price: 1800000,
+      phone: "9829011111",
+      state: "Rajasthan",
+      district: "Didwana-Kuchaman",
+      village: "Didwana",
+      ward: "वार्ड नं. 8",
+      verified: true,
+      fastResponder: true,
+      sold: false,
+      editCount: 0,
+      photos: ["data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='300' style='background:%230284c7'><text x='50%' y='50%' fill='white' font-size='24' font-family='sans-serif' text-anchor='middle'>Commercial Plot Didwana</text></svg>"]
+    },
+    {
+      id: 2,
+      type: "Rent",
+      category: "Makan",
+      title: "2 BHK स्वतंत्र मकान किराए हेतु",
+      price: 7500,
+      phone: "9829022222",
+      state: "Rajasthan",
+      district: "Didwana-Kuchaman",
+      village: "Kuchaman City",
+      ward: "वार्ड नं. 14",
+      verified: true,
+      fastResponder: false,
+      sold: false,
+      editCount: 0,
+      photos: ["data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='300' style='background:%23059669'><text x='50%' y='50%' fill='white' font-size='24' font-family='sans-serif' text-anchor='middle'>2 BHK House on Rent</text></svg>"]
+    }
+  ];
+
+  function initStatesDropdown() {
+    const filterState = document.getElementById('filter-state');
+    const postState = document.getElementById('post-state');
+    const states = Object.keys(indiaLocationHierarchy);
+
+    states.forEach(st => {
+      const opt1 = document.createElement('option');
+      opt1.value = st;
+      opt1.textContent = st;
+      if (st === "Rajasthan") opt1.selected = true;
+      filterState.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = st;
+      opt2.textContent = st;
+      if (st === "Rajasthan") opt2.selected = true;
+      postState.appendChild(opt2);
+    });
+
+    document.getElementById('user-interest').value = customerInterest;
+    loadFilterDistricts();
+    onStateChange();
+  }
+
+  function saveCustomerInterest() {
+    customerInterest = document.getElementById('user-interest').value;
+    localStorage.setItem('customerInterest', customerInterest);
+    alert(`आपकी पसंद "${getCategoryHindiName(customerInterest)}" सेट कर दी गई है। अब इसी के अनुसार ध्वनि सूचना (Audio Alert) सुनाई देगी।`);
+  }
+
+  function getCategoryHindiName(cat) {
+    const map = {
+      'Plot': 'प्लॉट / खुली ज़मीन',
+      'Makan': 'मकान',
+      'Shop': 'दुकान',
+      'Building': 'बिल्डिंग',
+      'Rent': 'किराया मकान/दुकान'
+    };
+    return map[cat] || 'प्रॉपर्टी';
+  }
+
+  function loadFilterDistricts() {
+    const state = document.getElementById('filter-state').value;
+    const distSelect = document.getElementById('filter-district');
+    distSelect.innerHTML = '<option value="">ज़िला चुनें (District)</option>';
+    if (state && indiaLocationHierarchy[state]) {
+      Object.keys(indiaLocationHierarchy[state]).sort().forEach(d => {
+        distSelect.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+    }
+  }
+
+  function onStateChange() {
+    const state = document.getElementById('post-state').value;
+    const distSelect = document.getElementById('post-district');
+    const villSelect = document.getElementById('post-village');
+    
+    distSelect.innerHTML = '<option value="">-- ज़िला चुनें --</option>';
+    villSelect.innerHTML = '<option value="">-- पहले ज़िला चुनें --</option>';
+    document.getElementById('manual-village-group').style.display = 'none';
+
+    if (state && indiaLocationHierarchy[state]) {
+      Object.keys(indiaLocationHierarchy[state]).sort().forEach(d => {
+        distSelect.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+    }
+  }
+
+  function onDistrictChange() {
+    const state = document.getElementById('post-state').value;
+    const dist = document.getElementById('post-district').value;
+    const villSelect = document.getElementById('post-village');
+    
+    villSelect.innerHTML = '<option value="">-- गाँव / कस्बा चुनें --</option>';
+    document.getElementById('manual-village-group').style.display = 'none';
+
+    if (state && dist && indiaLocationHierarchy[state][dist]) {
+      indiaLocationHierarchy[state][dist].forEach(v => {
+        villSelect.innerHTML += `<option value="${v}">${v}</option>`;
+      });
+    }
+  }
+
+  function onVillageChange() {
+    const vill = document.getElementById('post-village').value;
+    const manualWrap = document.getElementById('manual-village-group');
+    if (vill === "अन्य / Other") {
+      manualWrap.style.display = 'block';
+      document.getElementById('post-village-custom').required = true;
+    } else {
+      manualWrap.style.display = 'none';
+      document.getElementById('post-village-custom').required = false;
+    }
+  }
+
+  function persistData() {
+    try {
+      localStorage.setItem('cachedProperties', JSON.stringify(properties));
+      localStorage.setItem('adminSettings', JSON.stringify(adminSettings));
+    } catch (e) {
+      console.warn("Storage full");
+    }
+  }
+
+  function compressImage(file, maxDimension = 1000, quality = 0.7) {
+    return new Promise((resolve) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height && width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function resetAndRenderFeed() {
+    visibleLimit = 10;
+    renderFeed();
+  }
+
+  function renderFeed() {
+    const container = document.getElementById('feed-container');
+    container.innerHTML = '';
+    const selDist = document.getElementById('filter-district').value;
+    const selCat = document.getElementById('filter-type').value;
+
+    activeFilteredList = properties.filter(p => {
+      return p.type === currentMainTab &&
+        (!selDist || p.district === selDist) &&
+        (!selCat || p.category === selCat);
+    });
+
+    if (activeFilteredList.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:40px; color:#64748b;">कोई प्रॉपर्टी उपलब्ध नहीं मिली।</div>`;
+      document.getElementById('load-more-wrap').style.display = 'none';
+      return;
+    }
+
+    const slice = activeFilteredList.slice(0, visibleLimit);
+    slice.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-gallery">
+          ${p.photos.map(src => `<img src="${src}" loading="lazy" decoding="async" alt="Property">`).join('')}
+        </div>
+        <div class="card-body">
+          <div class="badge-row">
+            ${p.verified ? '<span class="badge badge-verified">✅ सत्यापित (Verified)</span>' : ''}
+            ${p.fastResponder ? '<span class="badge badge-fast">⚡ Fast Responder</span>' : ''}
+            ${p.sold ? '<span class="badge badge-sold">🏷️ SOLD OUT (सौदा पक्का)</span>' : ''}
+          </div>
+          <h4 style="margin-bottom:4px;">${p.title}</h4>
+          <div style="font-size:18px; font-weight:bold; color:var(--primary); margin-bottom:4px;">₹ ${p.price.toLocaleString('en-IN')}</div>
+          <div style="font-size:12px; color:#64748b; margin-bottom:10px;">📍 गाँव/कस्बा: <b>${p.village}</b>, ${p.ward}, ज़िला: ${p.district} (${p.state})</div>
+          
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn btn-sm btn-primary" onclick="recordVisitFeedback(${p.id})">🏡 विज़िट</button>
+            <button class="btn btn-sm btn-success" onclick="giveRateOffer(${p.id})">💰 रेट ऑफर</button>
+            
+            <a href="tel:${p.phone || '9829000000'}" class="btn btn-sm" style="background:#059669; color:white;">📞 कॉल करें</a>
+            
+            <button class="btn btn-sm btn-outline" onclick="editProperty(${p.id})">✏️ एडिट (${3 - p.editCount} शेष)</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteProperty(${p.id})">🗑️ हटाएं (Delete)</button>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    document.getElementById('load-more-wrap').style.display = (activeFilteredList.length > visibleLimit) ? 'block' : 'none';
+  }
+
+  function loadMoreCards() {
+    visibleLimit += 10;
+    renderFeed();
+  }
+
+  function switchMainTab(type) {
+    currentMainTab = type;
+    document.getElementById('tab-sale').classList.toggle('active', type === 'Sale');
+    document.getElementById('tab-rent').classList.toggle('active', type === 'Rent');
+    resetAndRenderFeed();
+  }
+
+  function recordVisitFeedback(id) {
+    confirm("क्या आपको यह प्रॉपर्टी पसंद आई? (OK = हाँ / Cancel = नहीं)");
+    prompt("कोई विशेष कारण या सुझाव लिखें:");
+    alert("आपकी विज़िट रिपोर्ट दर्ज कर ली गई है। धन्यवाद!");
+  }
+
+  function giveRateOffer(id) {
+    const offer = prompt("आप इस संपत्ति के लिए क्या अंतिम रेट (₹) देना चाहते हैं?");
+    if (offer) {
+      alert(`आपका ₹${offer} का प्रस्ताव ओनर को भेज दिया गया है।`);
+    }
+  }
+
+  function editProperty(id) {
+    const p = properties.find(x => x.id === id);
+    if (p.editCount >= 3) {
+      alert("⚠️ यह प्रॉपर्टी 3 बार एडिट हो चुकी है। अब इसे और एडिट नहीं किया जा सकता।");
+      return;
+    }
+    const newPrice = prompt("नयी क़ीमत दर्ज करें:", p.price);
+    if (newPrice) {
+      p.price = Number(newPrice);
+      p.editCount++;
+      persistData();
+      alert(`अपडेट सफल! कुल एडिट: ${p.editCount}/3`);
+      renderFeed();
+    }
+  }
+
+  function deleteProperty(id) {
+    const confirmDelete = confirm("⚠️ क्या आप निश्चित हैं कि आप इस प्रॉपर्टी लिस्टिंग को हमेशा के लिए हटाना चाहते हैं?");
+    if (confirmDelete) {
+      properties = properties.filter(item => item.id !== id);
+      persistData();
+      resetAndRenderFeed();
+      alert("✅ प्रॉपर्टी सफलतापूर्वक पोर्टल से हटा दी गई है।");
+    }
+  }
+
+  // Smart Interest-Based Speech & Pop-up Trigger
+  function testNearbyProximity() {
+    const interest = customerInterest || 'Plot';
+    const catName = getCategoryHindiName(interest);
+    const mockDist = "1 किलोमीटर";
+
+    // Text tailored to user's interest
+    lastSpokenText = `आपके इस लोकेशन से ${mockDist} की दूरी पे ${catName} उपलब्ध है।`;
+
+    const banner = document.getElementById('proximity-alert');
+    document.getElementById('prox-text').innerText = `📍 पसंद के अनुसार अलर्ट: ${catName}`;
+    document.getElementById('prox-speech-display').innerText = `"${lastSpokenText}"`;
+    document.getElementById('visit-count').innerText = userFreeVisitsRemaining;
+    banner.style.display = 'block';
+
+    if (adminSettings.audio) {
+      speakMessage(lastSpokenText);
+    }
+  }
+
+  function speakMessage(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'hi-IN';
+      utt.rate = 0.95;
+      utt.pitch = 1.0;
+      window.speechSynthesis.speak(utt);
+    }
+  }
+
+  function replayAudioAlert() {
+    if (lastSpokenText) {
+      speakMessage(lastSpokenText);
+    }
+  }
+
+  function handleProximityUnlock() {
+    if (adminSettings.visitfee && userFreeVisitsRemaining <= 0) {
+      openPaymentBox();
+    } else {
+      if (userFreeVisitsRemaining > 0) userFreeVisitsRemaining--;
+      alert(`सफल! विवरण अनलॉक हो गया है। बची हुई मुफ़्त विज़िट: ${userFreeVisitsRemaining}`);
+      document.getElementById('proximity-alert').style.display = 'none';
+    }
+  }
+
+  function openPaymentBox() {
+    const displayBox = document.getElementById('payout-details-display');
+    displayBox.innerHTML = `
+      <div style="font-weight:bold; margin-bottom:6px;">निर्धारित चार्ज: ₹${adminSettings.visitAmount}</div>
+      <div style="margin-bottom:4px;"><b>📱 UPI ID:</b> <span style="color:#0284c7;">${adminSettings.upiId || 'सेट नहीं है'}</span></div>
+      <div style="font-size:12px; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:6px;">
+        <b>🏦 बैंक खाता विवरण:</b><br>
+        • बैंक: ${adminSettings.bankName || '-'}<br>
+        • खाताधारक: ${adminSettings.acHolder || '-'}<br>
+        • खाता संख्या: ${adminSettings.accNo || '-'}<br>
+        • IFSC कोड: ${adminSettings.ifsc || '-'}
+      </div>
+    `;
+    openModal('payment-modal');
+  }
+
+  function confirmCustomerPayment() {
+    alert("भुगतान की पुष्टि के लिए आपका अनुरोध एडमिन को भेज दिया गया है।");
+    closeModal('payment-modal');
+    document.getElementById('proximity-alert').style.display = 'none';
+  }
+
+  async function saveProperty(e) {
+    e.preventDefault();
+    const p1File = document.getElementById('post-p1').files[0];
+    const p2File = document.getElementById('post-p2').files[0];
+    const p3File = document.getElementById('post-p3').files[0];
+    const p4File = document.getElementById('post-p4').files[0];
+
+    const compressedPhotos = [];
+    const mainPhoto = await compressImage(p1File);
+    if (mainPhoto) compressedPhotos.push(mainPhoto);
+
+    const extraPhotos = await Promise.all([
+      compressImage(p2File),
+      compressImage(p3File),
+      compressImage(p4File)
+    ]);
+    extraPhotos.forEach(p => { if (p) compressedPhotos.push(p); });
+
+    let finalVillage = document.getElementById('post-village').value;
+    if (finalVillage === "अन्य / Other") {
+      finalVillage = document.getElementById('post-village-custom').value || "गाँव";
+    }
+
+    const newProp = {
+      id: Date.now(),
+      type: document.getElementById('post-type').value,
+      category: document.getElementById('post-cat').value,
+      title: document.getElementById('post-title').value,
+      price: Number(document.getElementById('post-price').value),
+      phone: document.getElementById('post-phone').value,
+      state: document.getElementById('post-state').value,
+      district: document.getElementById('post-district').value,
+      village: finalVillage,
+      ward: document.getElementById('post-ward').value,
+      verified: !adminSettings.doc,
+      fastResponder: true,
+      sold: false,
+      editCount: 0,
+      photos: compressedPhotos.length > 0 ? compressedPhotos : ["data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='300' style='background:%23475569'><text x='50%' y='50%' fill='white' font-size='20' font-family='sans-serif' text-anchor='middle'>Property</text></svg>"]
+    };
+
+    properties.unshift(newProp);
+    persistData();
+    closeModal('post-modal');
+    resetAndRenderFeed();
+    alert("प्रॉपर्टी सफलतापूर्वक पोस्ट कर दी गई है!");
+  }
+
+  function toggleSwitch(key) {
+    adminSettings[key] = !adminSettings[key];
+    const btn = document.getElementById('sw-' + key);
+    btn.textContent = adminSettings[key] ? 'ON' : 'OFF';
+    btn.className = `btn btn-sm ${adminSettings[key] ? 'btn-success' : 'btn-danger'}`;
+    persistData();
+  }
+
+  function saveAdminConfig(showMessage = false) {
+    adminSettings.visitAmount = Number(document.getElementById('cfg-fee').value);
+    adminSettings.phone = document.getElementById('cfg-phone').value;
+    adminSettings.email = document.getElementById('cfg-email').value;
+    adminSettings.upiId = document.getElementById('cfg-upi').value;
+    adminSettings.bankName = document.getElementById('cfg-bankname').value;
+    adminSettings.acHolder = document.getElementById('cfg-acholder').value;
+    adminSettings.accNo = document.getElementById('cfg-accno').value;
+    adminSettings.ifsc = document.getElementById('cfg-ifsc').value;
+    persistData();
+    if (showMessage) alert("एडमिन बैंक, UPI एवं अन्य सेटिंग्स सफलतापूर्वक सुरक्षित कर दी गई हैं!");
+  }
+
+  function populateAdminForm() {
+    document.getElementById('cfg-fee').value = adminSettings.visitAmount || 99;
+    document.getElementById('cfg-phone').value = adminSettings.phone || '';
+    document.getElementById('cfg-email').value = adminSettings.email || '';
+    document.getElementById('cfg-upi').value = adminSettings.upiId || '';
+    document.getElementById('cfg-bankname').value = adminSettings.bankName || '';
+    document.getElementById('cfg-acholder').value = adminSettings.acHolder || '';
+    document.getElementById('cfg-accno').value = adminSettings.accNo || '';
+    document.getElementById('cfg-ifsc').value = adminSettings.ifsc || '';
+
+    ['brokerage', 'doc', 'devlock', 'audio', 'visitfee'].forEach(k => {
+      const btn = document.getElementById('sw-' + k);
+      if (btn) {
+        btn.textContent = adminSettings[k] ? 'ON' : 'OFF';
+        btn.className = `btn btn-sm ${adminSettings[k] ? 'btn-success' : 'btn-danger'}`;
+      }
+    });
+  }
+
+  function openAdminModal() { openModal('admin-modal'); }
+  function verifyAdminPin() {
+    const pin = document.getElementById('admin-pin-input').value;
+    if (pin === "1234") {
+      document.getElementById('admin-login-sec').style.display = 'none';
+      document.getElementById('admin-controls-sec').style.display = 'block';
+      populateAdminForm();
+    } else {
+      alert("गलत पिन! सही पिन 1234 है।");
+    }
+  }
+
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+  function toggleLang() {
+    currentLang = currentLang === 'hi' ? 'en' : 'hi';
+    document.getElementById('lang-btn').textContent = currentLang === 'hi' ? 'English' : 'हिंदी';
+    document.getElementById('app-title').textContent = currentLang === 'hi' ? '🏠 Property Connect Rajasthan' : '🏠 Property Connect Rajasthan (EN)';
+  }
+
+  initStatesDropdown();
+  renderFeed();
+</script>
+</body>
+</html>
