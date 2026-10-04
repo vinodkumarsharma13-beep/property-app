@@ -24,18 +24,29 @@ jobs:
           distribution: 'zulu'
           java-version: 17
 
-      - name: Install Tools & Build
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare Web Assets
         run: |
-          mkdir www
-          # अगर फाइल का नाम index.html या propertyapp.html कुछ भी हो, यह उसे सेट कर लेगा
-          find . -maxdepth 1 -name "*.html" -exec cp {} www/index.html \;
+          mkdir -p www
+          if [ -f "propertyapp.html" ]; then
+            cp propertyapp.html www/index.html
+          elif [ -f "index.html" ]; then
+            cp index.html www/index.html
+          else
+            find . -maxdepth 1 -name "*.html" -exec cp {} www/index.html \;
+          fi
           npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
           npx cap init "Property App" "com.property.app" --web-dir www
           npx cap add android
+
+      - name: Build Debug APK
+        run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
